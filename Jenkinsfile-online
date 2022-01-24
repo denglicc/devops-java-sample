@@ -87,9 +87,13 @@ pipeline {
                     credentialsId: env.KUBECONFIG_CREDENTIAL_ID,
                     variable: 'KUBECONFIG')
                     ]) {
-                    sh 'envsubst < deploy/dev-ol/devops-svc.yaml | kubectl apply -f -'
-                    sh 'envsubst < deploy/dev-ol/devops-sample.yaml | kubectl apply -f -'
+                    sh '''
+                      envsubst < deploy/dev-ol/devops-sample-svc.yaml | kubectl apply -f -
+                      envsubst < deploy/dev-ol/devops-sample.yaml | kubectl apply -f -
+                    '''
                 }
+            }
+          }
         }
         stage('push with tag'){
           when{
@@ -119,7 +123,18 @@ pipeline {
           }
           steps {
             input(id: 'deploy-to-production', message: 'deploy to production?')
-            kubernetesDeploy(configs: 'deploy/prod-ol/**', enableConfigSubstitution: true, kubeconfigId: "$KUBECONFIG_CREDENTIAL_ID")
+            container("maven") {
+              withCredentials([
+                  kubeconfigFile(
+                  credentialsId: env.KUBECONFIG_CREDENTIAL_ID,
+                  variable: 'KUBECONFIG')
+                  ]) {
+                  sh '''
+                    envsubst < deploy/prod-ol/devops-sample-svc.yaml | kubectl apply -f -
+                    envsubst < deploy/prod-ol/devops-sample.yaml | kubectl apply -f -
+                  '''
+               }
+            }
           }
         }
     }
