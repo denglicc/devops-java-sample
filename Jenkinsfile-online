@@ -81,8 +81,15 @@ pipeline {
           }
           steps {
             input(id: 'deploy-to-dev', message: 'deploy to dev?')
-            kubernetesDeploy(configs: 'deploy/dev-ol/**', enableConfigSubstitution: true, kubeconfigId: "$KUBECONFIG_CREDENTIAL_ID")
-          }
+            container ('maven') {
+                withCredentials([
+                    kubeconfigFile(
+                    credentialsId: env.KUBECONFIG_CREDENTIAL_ID,
+                    variable: 'KUBECONFIG')
+                    ]) {
+                    sh 'envsubst < deploy/dev-ol/devops-svc.yaml | kubectl apply -f -'
+                    sh 'envsubst < deploy/dev-ol/devops-sample.yaml | kubectl apply -f -'
+                }
         }
         stage('push with tag'){
           when{
